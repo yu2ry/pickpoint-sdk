@@ -18,10 +18,6 @@ use PickPointSdk\Exceptions\PickPointMethodCallException;
 
 class PickPointConnector implements DeliveryConnector
 {
-    const CACHE_SESSION_KEY = 'pickpoint_session_id';
-
-    const CACHE_SESSION_LIFE_TIME = 60;
-
     /**
      * @var Client
      */
@@ -43,30 +39,22 @@ class PickPointConnector implements DeliveryConnector
     private $defaultPackageSize;
 
     /**
-     * @var \Predis\Client $redisCache
-     */
-    private $redisCache;
-
-    /**
      * PickPointConnector constructor.
      * @param PickPointConf $pickPointConf
      * @param SenderDestination|null $senderDestination
      * @param PackageSize|null $packageSize
-     * @param array $predisConf
      * @param Client|null $guzzleClient
      */
     public function __construct(
         PickPointConf $pickPointConf,
         SenderDestination $senderDestination,
         PackageSize $packageSize = null,
-        array $predisConf = [],
         Client $guzzleClient = null
     ) {
         $this->client = $guzzleClient ?: new Client();
         $this->pickPointConf = $pickPointConf;
         $this->senderDestination = $senderDestination;
         $this->defaultPackageSize = $packageSize;
-        $this->redisCache = !empty($predisConf) ? new \Predis\Client($predisConf) : null;
     }
 
     /**
@@ -91,12 +79,6 @@ class PickPointConnector implements DeliveryConnector
      */
     private function auth()
     {
-        $cacheKey = self::CACHE_SESSION_KEY . '_' . $this->pickPointConf->getIKN();
-
-        if (!empty($this->redisCache) && !empty($this->redisCache->get($cacheKey))) {
-            return $this->redisCache->get($cacheKey);
-        }
-
         $loginUrl = $this->pickPointConf->getHost() . '/login';
 
         try {
@@ -107,11 +89,6 @@ class PickPointConnector implements DeliveryConnector
                 ],
             ]);
             $response = json_decode($request->getBody()->getContents(), true);
-
-            if (!empty($this->redisCache)) {
-                $this->redisCache->setex($cacheKey, self::CACHE_SESSION_LIFE_TIME, $response['SessionId']);
-            }
-
         } catch (\Exception $exception) {
             throw new PickPointMethodCallException($loginUrl, $exception->getMessage());
         }
