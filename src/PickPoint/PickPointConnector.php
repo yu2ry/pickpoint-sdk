@@ -77,7 +77,7 @@ class PickPointConnector implements DeliveryConnector
      * @return string
      * @throws PickPointMethodCallException
      */
-    private function auth()
+    protected function auth()
     {
         $loginUrl = $this->pickPointConf->getHost() . '/login';
 
